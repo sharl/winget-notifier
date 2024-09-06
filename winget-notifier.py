@@ -4,20 +4,19 @@ import io
 import binascii
 import threading
 import subprocess
-
+import re
 
 import schedule
 from pystray import Icon, Menu, MenuItem
 from PIL import Image
 
-INTERVAL = 600
+INTERVAL = 3600
 
 
 class taskTray:
     def __init__(self):
         # スレッド実行モード
         self.running = False
-        self.body = str()
 
         # アイコンの画像をデコード
         self.icon_image = Image.open(io.BytesIO(binascii.unhexlify(ICON.replace('\n', '').strip())))
@@ -30,14 +29,14 @@ class taskTray:
         self.doCheck()
 
     def doCheck(self):
-        r = subprocess.check_output(['winget', 'upgrade']).decode('utf-8')
-        line = r.split()[-1].strip()
+        r = subprocess.run(['winget', 'upgrade'], capture_output=True, encoding='utf-8').stdout
+        line = r.strip().split('\n')[-1].strip()
         print(line)
         self.app.title = line
-        if self.body != line:
-            if self.body:
-                self.app.icon = self.update_image
-            self.body = line
+        if re.sub(r'\D', '', line).isdigit():
+            self.app.icon = self.update_image
+        else:
+            self.app.icon = self.icon_image
         self.app.update_menu()
 
     def runSchedule(self):
